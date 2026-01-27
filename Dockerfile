@@ -28,6 +28,7 @@ COPY . /app/
 
 # Expose the MQTT ports
 EXPOSE 1883 8883
+EXPOSE 8000 8000
 
 # Ensure the Python interpreter is specified explicitly
 ENV PYTHONUNBUFFERED=1

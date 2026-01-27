@@ -12,11 +12,12 @@ services:
     networks:
       - app-network
 
-  data-quality:
+  ds2-ddt:
+    image: ds2-ddt:prod
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: data-quality
+    container_name: ds2-ddt
     depends_on:
       - mqtt-broker
     environment:

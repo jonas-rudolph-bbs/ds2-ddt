@@ -1,5 +1,6 @@
 # Ignore virtual environment
 venv/
+.env
 
 
 #Ignore python cache
@@ -19,3 +20,7 @@ validation/gx
 
 .vscode/
 .idea/
+.dockerignore
+
+k8s/
+

@@ -17,7 +17,9 @@
         "params": {
           "column": "co",
           "min_value": 0,
-          "max_value": 0.9
+          "max_value": 0.9,
+          "strict_min": false,
+          "strict_max": false
         },
         "handler": "SmoothingOutliers"
       }
@@ -56,7 +58,7 @@
     ]
   },
   "test": {
-    "newAttribute1": [
+    "test": [
       {
         "rule": "expect_column_values_to_not_be_null",
         "params": {

@@ -124,7 +124,8 @@ class GXInitializer:
     def _create_validation_definitions(self):
 
         for suite_name, suite in self.suites.items():
-            definition_name = f"{suite_name.removesuffix("_expectation_suite")}_validation_definition"
+            print(f'Suite name: {suite_name}')
+            definition_name = f"{suite_name.removesuffix('_expectation_suite')}_validation_definition"
             validation_definition = gx.ValidationDefinition(
                 data=self.batch_definition,
                 suite=suite,

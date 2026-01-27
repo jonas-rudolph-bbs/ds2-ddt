@@ -4,9 +4,9 @@
       {
         "rule": "expect_column_values_to_not_be_null",
         "params": {
-          "column": "id"
+          "column": "hello"
         },
-        "handler": ""
+        "handler": "SmoothingOutliers"
       }
     ]
   },
@@ -50,17 +50,14 @@
         "handler": "SmoothingOutliers"
       }
     ],
-    "co": [
+    "dateTo": [
       {
-        "rule": "expect_column_values_to_be_between",
+        "rule": "expect_column_values_to_match_regex",
         "params": {
-          "column": "co",
-          "min_value": 0,
-          "max_value": 0.9,
-          "strict_min": true,
-          "strict_max": true
+          "column": "dateTo",
+          "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}(:?\\d{2})?)$"
         },
-        "handler": "SmoothingOutliers"
+        "handler": "TimestampCorrection"
       }
     ],
     "no2": [
@@ -89,16 +86,6 @@
         "handler": "SmoothingOutliers"
       }
     ],
-    "dateTo": [
-      {
-        "rule": "expect_column_values_to_match_regex",
-        "params": {
-          "column": "dateTo",
-          "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}(:?\\d{2})?)$"
-        },
-        "handler": "TimestampCorrection"
-      }
-    ],
     "lat": [
       {
         "rule": "expect_column_values_to_be_between",
@@ -121,6 +108,17 @@
           "max_value": 180,
           "strict_min": true,
           "strict_max": true
+        },
+        "handler": "SmoothingOutliers"
+      }
+    ]
+  },
+  "neuesTopic": {
+    "hallo": [
+      {
+        "rule": "expect_column_values_to_not_be_null",
+        "params": {
+          "column": "hallo"
         },
         "handler": "SmoothingOutliers"
       }
