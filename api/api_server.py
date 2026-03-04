@@ -10,6 +10,8 @@ import json
 from config import ConfigProvider, config_manager
 from config import ConfigManager
 from validation.gx_init import GXInitializer
+from profiling import DataProfilerUpdated, ProfilerConfig
+
 
 
 app = FastAPI(title="Data Ingestion API")
@@ -191,3 +193,35 @@ async def delete_config(
         "type": cfg_type,
         "gx_reloaded": True,
     }
+
+
+
+@app.post("/profiling/profile/{topic}")
+async def profile_pipeline(
+    request: Request,
+    ts_col: Optional[str] = Query(None, description="Optional timestamp column name for profiling"),
+    id_cols: Optional[List[str]] = Query(None, description="Optional list of ID column names for profiling"),
+    payloads: List[LoosePayload] = Body(
+        ..., 
+        description="Array of records to process for profiling"
+    ),
+):
+    """
+    Endpoint to run a batch of data through a profiling pipeline and return rule suggestions and possible anomalies. 
+    """
+
+    profiler_cfg = ProfilerConfig(
+        id_cols=id_cols or [],
+        ts_col=ts_col,       
+        drop_cols=[],
+        contamination=0.1,
+    )
+    raw_records = [p.dict() for p in payloads]
+    profiler = DataProfilerUpdated.from_records(records=raw_records, config=profiler_cfg)
+    profile = profiler.run()
+    
+
+    
+
+    
+    return profile
