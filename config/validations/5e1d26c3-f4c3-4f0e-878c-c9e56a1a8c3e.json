@@ -1,0 +1,72 @@
+{
+  "testtopic": {
+    "co": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "co",
+          "min_value": 0.1,
+          "max_value": 14.755200000000004,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      }
+    ],
+    "no2": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "no2",
+          "min_value": 2,
+          "max_value": 268.3307000000002,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      }
+    ],
+    "pm25": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "pm25",
+          "min_value": 3.51,
+          "max_value": 42,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      }
+    ],
+    "benzene": [
+      {
+        "rule": "expect_column_values_to_not_be_null",
+        "params": {
+          "column": "benzene"
+        },
+        "handler": ""
+      }
+    ],
+    "dateFrom": [
+      {
+        "rule": "expect_column_values_to_match_regex",
+        "params": {
+          "column": "dateFrom",
+          "regex": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:?\\d{2})?)?$"
+        },
+        "handler": "TimestampCorrection"
+      }
+    ],
+    "dateTo": [
+      {
+        "rule": "expect_column_values_to_match_regex",
+        "params": {
+          "column": "dateTo",
+          "regex": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:?\\d{2})?)?$"
+        },
+        "handler": ""
+      }
+    ]
+  }
+}

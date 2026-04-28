@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-
+import re
 import math
 from collections import Counter
 from dataclasses import dataclass
@@ -146,19 +146,218 @@ def _safe_parse_dt(x: Any):
     return None
 
 
-def is_timestamp_col(series: pd.Series, threshold: float = 0.9) -> bool:
-    """Heuristic: treat a column as timestamp-like if dateparser can parse most of a small sample."""
-    sample = series.dropna().head(100)
-    if len(sample) < 5:
-        return False
-    if dateparser is None:
-        # fallback: try pandas parsing on sample
-        parsed = pd.to_datetime(sample, errors="coerce")
-        return float(parsed.notna().mean()) >= threshold
+# --- precompiled patterns ---
+ISO_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}"
+    r"(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?"
+    r"(?:Z|[+-]\d{2}:\d{2})?$"
+)
 
-    parsed = sample.apply(_safe_parse_dt)
-    success_rate = pd.Series(parsed).notna().mean()
-    return float(success_rate) >= threshold
+LOCALE_RE = re.compile(
+    r"^(?:\d{1,2}[/.]\d{1,2}[/.]\d{2,4}|\d{4}[/.]\d{1,2}[/.]\d{1,2})$"
+)
+
+TIME_ONLY_RE = re.compile(
+    r"^\d{1,2}:\d{2}(?::\d{2})?$"
+)
+
+EPOCH_RE = re.compile(
+    r"^\d{10}(\d{3})?(\d{3})?$"   # 10, 13, or 16 digits
+)
+
+COMPACT_RE = re.compile(
+    r"^\d{8}(\d{6})?$"            # 8 or 14 digits
+)
+
+PURE_DECIMAL_RE = re.compile(
+    r"^[+-]?\d+\.\d+$"
+)
+
+PURE_INTEGER_RE = re.compile(
+    r"^[+-]?\d+$"
+)
+
+MONTH_WORDS = {
+    "jan", "january",
+    "feb", "february",
+    "mar", "march",
+    "apr", "april",
+    "may",
+    "jun", "june",
+    "jul", "july",
+    "aug", "august",
+    "sep", "sept", "september",
+    "oct", "october",
+    "nov", "november",
+    "dec", "december",
+}
+
+WEEKDAY_WORDS = {
+    "mon", "monday",
+    "tue", "tues", "tuesday",
+    "wed", "wednesday",
+    "thu", "thur", "thurs", "thursday",
+    "fri", "friday",
+    "sat", "saturday",
+    "sun", "sunday",
+}
+
+def _contains_date_words(s: str) -> bool:
+    tokens = re.findall(r"[A-Za-z]+", s.lower())
+    return any(tok in MONTH_WORDS or tok in WEEKDAY_WORDS for tok in tokens)
+
+
+def _classify_timestamp_family(x: Any) -> Optional[str]:
+    """
+    Return one of:
+      - 'iso'
+      - 'locale'
+      - 'textual'
+      - 'time_only'
+      - 'epoch'
+      - 'compact'
+    or None if the value does not structurally look like a timestamp.
+    """
+    if not isinstance(x, str):
+        return None
+
+    s = x.strip()
+    if not s:
+        return None
+
+    # Hard reject decimal numbers like 0.2, 3.14, -1.5
+    if PURE_DECIMAL_RE.fullmatch(s):
+        return None
+
+    if ISO_RE.fullmatch(s):
+        return "iso"
+
+    if LOCALE_RE.fullmatch(s):
+        return "locale"
+
+    if TIME_ONLY_RE.fullmatch(s):
+        return "time_only"
+
+    # Pure integers are only accepted for very specific timestamp families
+    if PURE_INTEGER_RE.fullmatch(s):
+        if EPOCH_RE.fullmatch(s):
+            return "epoch"
+        if COMPACT_RE.fullmatch(s):
+            return "compact"
+        return None
+
+    if _contains_date_words(s):
+        return "textual"
+
+    return None
+
+
+def _validate_timestamp_value(s: str, family: str) -> bool:
+    """
+    Strict validation inside the detected family.
+    """
+    try:
+        if family == "iso":
+            parsed = pd.to_datetime([s], errors="coerce")
+            return parsed.notna().all()
+
+        if family == "locale":
+            # accept if either day-first or month-first works
+            p1 = pd.to_datetime([s], errors="coerce", dayfirst=True)
+            p2 = pd.to_datetime([s], errors="coerce", dayfirst=False)
+            return bool(p1.notna().all() or p2.notna().all())
+
+        if family == "textual":
+            parsed = pd.to_datetime([s], errors="coerce")
+            return parsed.notna().all()
+
+        if family == "time_only":
+            parts = s.split(":")
+            if len(parts) not in (2, 3):
+                return False
+            hh = int(parts[0])
+            mm = int(parts[1])
+            ss = int(parts[2]) if len(parts) == 3 else 0
+            return 0 <= hh <= 23 and 0 <= mm <= 59 and 0 <= ss <= 59
+
+        if family == "epoch":
+            n = int(s)
+            digits = len(s.lstrip("+-"))
+
+            # plausible unix ranges
+            if digits == 10:   # seconds
+                return 0 <= n <= 4102444800   # up to year 2100
+            if digits == 13:   # milliseconds
+                return 0 <= n <= 4102444800000
+            if digits == 16:   # microseconds
+                return 0 <= n <= 4102444800000000
+            return False
+
+        if family == "compact":
+            digits = len(s)
+            if digits == 8:
+                parsed = pd.to_datetime([s], format="%Y%m%d", errors="coerce")
+                return parsed.notna().all()
+            if digits == 14:
+                parsed = pd.to_datetime([s], format="%Y%m%d%H%M%S", errors="coerce")
+                return parsed.notna().all()
+            return False
+
+        return False
+
+    except Exception:
+        return False
+
+
+def is_timestamp_col(
+    series: pd.Series,
+    threshold: float = 0.9,
+    min_samples: int = 5,
+) -> bool:
+    """
+Heuristic to detect if a column is likely a timestamp/datetime.
+    """
+    sample = series.dropna().head(100)
+
+    if len(sample) < min_samples:
+        return False
+
+    families = []
+    str_values = []
+
+    for x in sample:
+        if not isinstance(x, str):
+            # allow integer epoch/compact cases by converting only ints, not floats
+            if isinstance(x, int):
+                s = str(x)
+            else:
+                # floats like 0.2 should not be considered timestamp-like
+                continue
+        else:
+            s = x.strip()
+
+        fam = _classify_timestamp_family(s)
+        if fam is not None:
+            families.append(fam)
+            str_values.append((s, fam))
+
+    if len(families) < min_samples:
+        return False
+
+    family_counts = pd.Series(families).value_counts()
+    dominant_family = family_counts.index[0]
+    dominant_family_rate = float(family_counts.iloc[0] / len(sample))
+
+    # if the column has no strong dominant date family, reject it
+    if dominant_family_rate < threshold:
+        return False
+
+    # strict validation only on dominant-family members
+    dominant_values = [s for s, fam in str_values if fam == dominant_family]
+    valid_rate = sum(_validate_timestamp_value(s, dominant_family) for s in dominant_values) / len(sample)
+
+    return float(valid_rate) >= threshold
+
 
 
 def json_safe(obj: Any) -> Any:
@@ -248,7 +447,7 @@ class DataProfilerUpdated:
         records: Union[List[Dict[str, Any]], Dict[str, Any], pd.DataFrame],
         *,
         config: Optional[ProfilerConfig] = None,
-    ) -> "DataProfiler":
+    ) -> DataProfilerUpdated:
         """
         Accepts:
           - list[dict] (common JSON payload)
@@ -497,7 +696,7 @@ class DataProfilerUpdated:
                         "anomaly_class": "schema_refinement/timestamp",
                         "attribute": col,
                         "evidence": {"timestamp_rate": p["timestamp_rate"]},
-                        "suggested_rule": f"Column '{col}' looks like a timestamp. Enforce ISO-8601 format and check for logical continuity (no future dates).",
+                        "suggested_rule": f"Column '{col}' looks like a timestamp. Enforce ISO-8601 format and check for logical continuity.",
                     }
                 )
 
