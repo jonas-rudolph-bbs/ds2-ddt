@@ -8,6 +8,15 @@
         },
         "handler": "SmoothingOutliers"
       }
+    ],
+    "neu": [
+      {
+        "rule": "expect_column_values_to_not_be_null",
+        "params": {
+          "column": "neu"
+        },
+        "handler": ""
+      }
     ]
   },
   "air-quality": {

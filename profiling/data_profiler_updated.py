@@ -15,10 +15,11 @@ try:
     from sklearn.ensemble import IsolationForest
     from sklearn.preprocessing import RobustScaler
     from sklearn.cluster import DBSCAN
-except Exception:  # pragma: no cover
-    IsolationForest = None
-    RobustScaler = None
-    DBSCAN = None
+except ImportError as exc:
+    raise ImportError(
+        "scikit-learn is required for anomaly detection. "
+        "Install it with: pip install scikit-learn"
+    ) from exc
 
 try:
     import dateparser  # type: ignore
