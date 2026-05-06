@@ -11,9 +11,10 @@
     ],
     "neu": [
       {
-        "rule": "expect_column_values_to_not_be_null",
+        "rule": "expect_column_values_number_of_decimal_places_to_equal",
         "params": {
-          "column": "neu"
+          "column": "neu",
+          "decimal_places": "3"
         },
         "handler": ""
       }
@@ -22,26 +23,10 @@
   "air-quality": {
     "pm10": [
       {
-        "rule": "expect_column_values_to_be_between",
+        "rule": "expect_column_values_number_of_decimal_places_to_equal",
         "params": {
           "column": "pm10",
-          "min_value": 0,
-          "max_value": 80,
-          "strict_min": true,
-          "strict_max": true
-        },
-        "handler": "SmoothingOutliers"
-      }
-    ],
-    "pm1": [
-      {
-        "rule": "expect_column_values_to_be_between",
-        "params": {
-          "column": "pm1",
-          "min_value": 0,
-          "max_value": 80,
-          "strict_min": true,
-          "strict_max": true
+          "decimal_places": "0"
         },
         "handler": "SmoothingOutliers"
       }
@@ -94,32 +79,6 @@
         },
         "handler": "SmoothingOutliers"
       }
-    ],
-    "lat": [
-      {
-        "rule": "expect_column_values_to_be_between",
-        "params": {
-          "column": "lat",
-          "min_value": -90,
-          "max_value": 90,
-          "strict_min": false,
-          "strict_max": false
-        },
-        "handler": "SmoothingOutliers"
-      }
-    ],
-    "lon": [
-      {
-        "rule": "expect_column_values_to_be_between",
-        "params": {
-          "column": "lon",
-          "min_value": -180,
-          "max_value": 180,
-          "strict_min": true,
-          "strict_max": true
-        },
-        "handler": "SmoothingOutliers"
-      }
     ]
   },
   "neuesTopic": {
@@ -129,7 +88,7 @@
         "params": {
           "column": "hallo"
         },
-        "handler": "SmoothingOutliers"
+        "handler": ""
       }
     ]
   }

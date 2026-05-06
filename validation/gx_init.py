@@ -4,27 +4,33 @@
 import os
 import shutil
 from typing import Dict
+
+from pexpect import expect
 from config import ConfigProvider
 from utils.utils import topic_url_to_name
 import great_expectations as gx
+from great_expectations_experimental.expectations.expect_column_values_number_of_decimal_places_to_equal import (
+    ExpectColumnValuesNumberOfDecimalPlacesToEqual,
+)
+
 
 class GXInitializer:
     """
     Initializes the Great Expectations context, data source, expectation suites, and validation definitions
     based on a configuration file.
     """
-    def __init__(self, gx_root_dir: str = './validation'):
+
+    def __init__(self, gx_root_dir: str = "./validation"):
         self.gx_root_dir = gx_root_dir
-        self.validation_config_dir: str = './config/validations'
+        self.validation_config_dir: str = "./config/validations"
         self.context = None
         self.suites: Dict[str, gx.ExpectationSuite] = {}
         self.validation_definitions: Dict[str, gx.ValidationDefinition] = {}
 
-        self._init_gx() 
-        
+        self._init_gx()
+
     def _init_gx(self):
-        """ Initializes the Great Expectations context and sets up the data source, expectation suites, and validation definitions.
-        """
+        """Initializes the Great Expectations context and sets up the data source, expectation suites, and validation definitions."""
         self.suites = {}
         self.validation_definitions = {}
         # Delete existing gx folder for a fresh start.
@@ -43,19 +49,18 @@ class GXInitializer:
     def reload_gx(self):
         """Reloads the Great Expectations context and its configurations."""
         self._init_gx()
-        
 
     def _check_and_delete_gx_folder(self):
-        gx_folder_path = os.path.join(self.gx_root_dir, 'gx')
+        gx_folder_path = os.path.join(self.gx_root_dir, "gx")
         if os.path.exists(gx_folder_path):
             shutil.rmtree(gx_folder_path)
 
     def _initialize_context(self):
-        self.context = gx.get_context(mode='file', project_root_dir=self.gx_root_dir)
+        self.context = gx.get_context(mode="file", project_root_dir=self.gx_root_dir)
 
     def _load_validation_config(self):
         config_provider = ConfigProvider()
-        
+
         # self.validation_config = config_loader.load_config()
         self.validation_config = config_provider.validation()
 
@@ -67,7 +72,9 @@ class GXInitializer:
         self.data_asset = self.data_source.add_dataframe_asset(name=data_asset_name)
 
         batch_definition_name = "mqtt-batch"
-        self.batch_definition = self.data_asset.add_batch_definition_whole_dataframe(batch_definition_name)
+        self.batch_definition = self.data_asset.add_batch_definition_whole_dataframe(
+            batch_definition_name
+        )
 
     def _create_expectation_suites(self):
         expectation_mapping = {
@@ -100,6 +107,7 @@ class GXInitializer:
             "expect_column_stdev_to_be_between": gx.expectations.ExpectColumnStdevToBeBetween,
             "expect_column_min_to_be_between": gx.expectations.ExpectColumnMinToBeBetween,
             "expect_column_values_to_not_be_in_set": gx.expectations.ExpectColumnValuesToNotBeInSet,
+            "expect_column_values_number_of_decimal_places_to_equal": ExpectColumnValuesNumberOfDecimalPlacesToEqualCompat,
         }
 
         for id in self.validation_config:
@@ -110,25 +118,46 @@ class GXInitializer:
 
                 for attribute, expectations in attributes.items():
                     for expectation in expectations:
-                        rule = expectation['rule']
-                        params = expectation['params']
-        
+                        rule = expectation["rule"]
+                        params = expectation["params"]
+
                         expectation_class = expectation_mapping.get(rule)
                         if expectation_class:
-                
-                            expectation_obj = expectation_class(**params)
-            
-                            suite.add_expectation(expectation_obj)
+                            try:
+                                expectation_obj = expectation_class(**params)
+                                suite.add_expectation(expectation_obj)
 
+                            except Exception as e:
+                                raise RuntimeError(
+                                    f"Failed to create expectation '{rule}' with params={params}. "
+                                    f"Expectation class={expectation_class}. Original error: {e}"
+                                ) from e
 
     def _create_validation_definitions(self):
 
         for suite_name, suite in self.suites.items():
-            print(f'Suite name: {suite_name}')
-            definition_name = f"{suite_name.removesuffix('_expectation_suite')}_validation_definition"
-            validation_definition = gx.ValidationDefinition(
-                data=self.batch_definition,
-                suite=suite,
-                name=definition_name
+            print(f"Suite name: {suite_name}")
+            definition_name = (
+                f"{suite_name.removesuffix('_expectation_suite')}_validation_definition"
             )
-            self.validation_definitions[definition_name] = self.context.validation_definitions.add(validation_definition)
+            validation_definition = gx.ValidationDefinition(
+                data=self.batch_definition, suite=suite, name=definition_name
+            )
+            self.validation_definitions[definition_name] = (
+                self.context.validation_definitions.add(validation_definition)
+            )
+
+
+class ExpectColumnValuesNumberOfDecimalPlacesToEqualCompat(
+    ExpectColumnValuesNumberOfDecimalPlacesToEqual
+):
+    """
+    Compatibility wrapper for the old experimental decimal places expectation.
+    Makes it instantiable like newer GX/Pydantic expectations.
+    """
+
+    column: str
+    decimal_places: int
+
+    args_keys = ("column",)
+    success_keys = ("decimal_places",)

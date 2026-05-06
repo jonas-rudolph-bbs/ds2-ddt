@@ -1,0 +1,73 @@
+{
+  "air-quality": {
+    "co": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "co",
+          "min_value": 0.1,
+          "max_value": 14.755200000000004,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      }
+    ],
+    "o3": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "o3",
+          "min_value": 14.870000000000001,
+          "max_value": 156,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      }
+    ],
+    "no2": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "no2",
+          "min_value": 2,
+          "max_value": 268.3307000000002,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      }
+    ],
+    "benzene": [
+      {
+        "rule": "expect_column_values_to_be_between",
+        "params": {
+          "column": "benzene",
+          "min_value": 0,
+          "max_value": 0.7,
+          "strict_min": false,
+          "strict_max": false
+        },
+        "handler": ""
+      },
+      {
+        "rule": "expect_column_values_to_not_be_null",
+        "params": {
+          "column": "benzene"
+        },
+        "handler": ""
+      }
+    ],
+    "stationId": [
+      {
+        "rule": "expect_column_values_to_match_regex",
+        "params": {
+          "column": "stationId",
+          "regex": "^[A-Z]{1}\\d{3}$"
+        },
+        "handler": ""
+      }
+    ]
+  }
+}
