@@ -5,3 +5,4 @@
 
 from .config_provider import ConfigProvider
 from .config_manager import ConfigManager
+from .validation_config_schema import normalize_validation_config, validation_topics

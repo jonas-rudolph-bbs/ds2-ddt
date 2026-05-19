@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .config_manager import ConfigManager
+from .validation_config_schema import normalize_validation_config
 
 
 class ConfigProvider:
@@ -10,19 +11,21 @@ class ConfigProvider:
 
     def reload(self):
         config_manager = ConfigManager()
-        
-        # self._cache = {
-        #     "mqtt": loader.load_config(),
-        #     "validation": loader.load_config("validations"),
-        # }
+
+        mqtt_config = config_manager.load("generated_mqtt_config.json")
+        validation_configs = config_manager.load("validations")
+
+        normalized_validation_configs = {
+            config_id: normalize_validation_config(config_id, config)
+            for config_id, config in validation_configs.items()
+        }
 
         self._cache = {
-            "mqtt": config_manager.load("generated_mqtt_config.json"),
-            "validation": config_manager.load("validations"),
+            "mqtt": mqtt_config,
+            "validation": normalized_validation_configs,
         }
 
     def mqtt(self):
-        # Keep your current access pattern
         return self._cache["mqtt"]
 
     def validation(self):

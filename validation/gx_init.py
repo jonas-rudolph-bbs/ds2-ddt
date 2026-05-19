@@ -4,7 +4,7 @@
 import os
 import shutil
 from typing import Dict
-
+from typing import Optional
 from pexpect import expect
 from config import ConfigProvider
 from utils.utils import topic_url_to_name
@@ -12,6 +12,7 @@ import great_expectations as gx
 from great_expectations_experimental.expectations.expect_column_values_number_of_decimal_places_to_equal import (
     ExpectColumnValuesNumberOfDecimalPlacesToEqual,
 )
+from config.validation_config_schema import validation_topics
 
 
 class GXInitializer:
@@ -110,8 +111,10 @@ class GXInitializer:
             "expect_column_values_number_of_decimal_places_to_equal": ExpectColumnValuesNumberOfDecimalPlacesToEqualCompat,
         }
 
-        for id in self.validation_config:
-            for topic, attributes in self.validation_config[id].items():
+        for id, validation_config in self.validation_config.items():
+            topics = validation_topics(validation_config)
+
+            for topic, attributes in topics.items():
                 suite_name = f"{id}_{topic}_expectation_suite"
                 suite = gx.ExpectationSuite(name=suite_name)
                 self.suites[suite_name] = self.context.suites.add(suite)
@@ -152,12 +155,29 @@ class ExpectColumnValuesNumberOfDecimalPlacesToEqualCompat(
     ExpectColumnValuesNumberOfDecimalPlacesToEqual
 ):
     """
-    Compatibility wrapper for the old experimental decimal places expectation.
-    Makes it instantiable like newer GX/Pydantic expectations.
+    Compatibility wrapper for the legacy decimal places expectation.
+
+    The original expectation is a ColumnMapExpectation but does not define
+    'mostly'. Newer GX validation code expects 'mostly' to exist.
     """
 
+    # Keep the original metric
+    map_metric = "column_values.decimal_places_equal"
+
+    # Add mostly to the success keys
+    success_keys = ("decimal_places", "mostly")
+
+    # Provide default mostly value
+    default_kwarg_values = {
+        **getattr(
+            ExpectColumnValuesNumberOfDecimalPlacesToEqual,
+            "default_kwarg_values",
+            {},
+        ),
+        "mostly": 1.0,
+    }
+
+    # Pydantic fields accepted by the expectation constructor
     column: str
     decimal_places: int
-
-    args_keys = ("column",)
-    success_keys = ("decimal_places",)
+    mostly: Optional[float] = 1.0

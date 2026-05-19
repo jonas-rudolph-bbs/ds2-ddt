@@ -4,6 +4,7 @@ from __future__ import annotations
 import json, os, tempfile, fnmatch
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, Iterable
+from .validation_config_schema import normalize_validation_config
 
 class ConfigManager:
     """
@@ -93,13 +94,23 @@ class ConfigManager:
     def write_atomic(self, cfg_type: str, config_id: Optional[str], content: Dict[str, Any]) -> Path:
         """
         Atomically write JSON for either:
-          - mqtt: config/generated_mqtt_config.json
-          - validation: config/validations/{config_id}.json
+        - mqtt: config/generated_mqtt_config.json
+        - validation: config/validations/{config_id}.json
         """
         target = self._resolve_target(cfg_type, config_id)
         target.parent.mkdir(parents=True, exist_ok=True)
 
-        # atomic temp → replace
+        if cfg_type == "validation":
+            if not config_id:
+                raise ValueError("validation cfg_type requires a non-empty config_id")
+
+            existing = self.read_current("validation", config_id)
+            content = normalize_validation_config(
+                config_id=config_id,
+                config=content,
+                existing_config=existing,
+            )
+
         fd, tmp_path = tempfile.mkstemp(dir=str(target.parent), prefix=target.stem + ".", suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as tmp:
@@ -113,6 +124,7 @@ class ConfigManager:
                     os.remove(tmp_path)
             except Exception:
                 pass
+
         return target
 
     # ---------- delete ----------

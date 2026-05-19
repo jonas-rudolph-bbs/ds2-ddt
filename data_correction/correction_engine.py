@@ -23,6 +23,7 @@ import pandas as pd
 from data_correction import DataCorrection
 from config import ConfigProvider
 from data_correction import is_valid_strategy
+from config.validation_config_schema import validation_topics
 
 
 class CorrectionEngine:
@@ -35,8 +36,12 @@ class CorrectionEngine:
         corrector: DataCorrection
     ) -> None:
         cfg_provider = ConfigProvider()
-        config_id = config_name.removesuffix("_"+topic)
-        self._rules = cfg_provider.validation()[config_id][topic]
+        config_id = config_name.removesuffix("_" + topic)
+
+        validation_config = cfg_provider.validation()[config_id]
+        topics = validation_topics(validation_config)
+
+        self._rules = topics[topic]
         self._corrector = corrector
 
     # ------------------------------------------------------------------ #

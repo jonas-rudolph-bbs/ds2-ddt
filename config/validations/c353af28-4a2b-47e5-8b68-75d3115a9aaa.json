@@ -1,0 +1,14 @@
+{
+  "test": {
+    "co": [
+      {
+        "rule": "expect_column_values_number_of_decimal_places_to_equal",
+        "params": {
+          "column": "co",
+          "decimal_places": 1
+        },
+        "handler": ""
+      }
+    ]
+  }
+}
