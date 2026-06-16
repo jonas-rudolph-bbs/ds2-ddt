@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Use an official Ubuntu image as a base
-FROM ubuntu:latest
+FROM python:3.12-slim
 
 # Install system tools, Python, and pip
 RUN apt-get update && apt-get install -y \
@@ -27,7 +27,7 @@ RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 COPY . /app/
 
 # Expose the MQTT ports
-EXPOSE 1883 8883
+# EXPOSE 1883 8883
 EXPOSE 8000 8000
 
 # Ensure the Python interpreter is specified explicitly
