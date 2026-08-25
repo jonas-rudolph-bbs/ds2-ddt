@@ -24,11 +24,27 @@ services:
       BROKER: mqtt-broker
       PORT: 1883
     volumes:
-      - ./config:/app/config  # Mount config directory for manual edits
-      - ./.env:/app/.env:ro # Mount .env file as read-only
+      # Only mount the runtime-editable data, not the whole config/ package
+      - ./config/generated_mqtt_config.json:/app/config/generated_mqtt_config.json
+      - ./config/validations:/app/config/validations
     ports:
       - "5000:5000"  # expose main application port for local testing
       - "8000:8000"  # expose fastapi port for local testing
+    networks:
+      - app-network
+
+  ds2-configurator:
+    image: ds2-configurator:1.1.0
+    build:
+      context: /mnt/c/Users/jonas/Documents/BBS/ds2-configurator
+      dockerfile: Dockerfile
+    container_name: ds2-configurator
+    depends_on:
+      - ds2-ddt
+    volumes:
+      - /mnt/c/Users/jonas/Documents/BBS/ds2-configurator/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "4200:80"
     networks:
       - app-network
 

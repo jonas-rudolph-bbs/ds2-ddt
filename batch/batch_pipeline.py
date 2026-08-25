@@ -28,9 +28,13 @@ class BatchPipeline:
         self.correction_engine = CorrectionEngine(topic, config_name, DataCorrection())
         publish = BatchPipeline._default_publish
         cfg_provider = ConfigProvider()
+        self._alarms  = None
+        self._results = None
         if publish:
-            self._alarms  = AlarmPublisher(cfg_provider.mqtt()['topics'][topic], publish)
-            self._results = ResultPublisher(cfg_provider.mqtt()['topics'][topic], publish)
+            mqtt_topic_cfg = cfg_provider.mqtt()['topics'].get(topic)
+            if mqtt_topic_cfg:
+                self._alarms  = AlarmPublisher(mqtt_topic_cfg, publish)
+                self._results = ResultPublisher(mqtt_topic_cfg, publish)
 
 
     
@@ -47,11 +51,13 @@ class BatchPipeline:
         cleaned_df, alarm_events = self.correction_engine.run(validation_results, df)
 
         # --- alarms first ------------------------------------------------- #
-        for alarm in alarm_events:
-            self._alarms.emit(cleaned_df, alarm)
+        if self._alarms:
+            for alarm in alarm_events:
+                self._alarms.emit(cleaned_df, alarm)
 
         # --- publish cleaned rows ---------------------------------------- #
-        self._results.emit(cleaned_df, df)
+        if self._results:
+            self._results.emit(cleaned_df, df)
 
 
     def process_sync(self, df: pd.DataFrame) -> pd.DataFrame:

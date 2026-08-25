@@ -1,6 +1,9 @@
 .git
 __pycache__/
+**/__pycache__/
 *.pyc
+**/*.pyc
 tests/
 venv/
 .env
+demo_data/
